@@ -1,7 +1,10 @@
 #[warn(unused_assignments)]
 #[macro_use] extern crate rocket;
-use user_auth_temp::{auth, utils};
+use rocket::time::convert::Second;
+use user_auth_temp::jwt::JwtSecretKey;
+use user_auth_temp::{auth, utils, jwt};
 use rocket::form::Form;
+use rocket::State;
 
 #[get("/")]
 fn index() -> String {
@@ -22,6 +25,19 @@ struct LoginData {
     password: String,
 }
 
+#[derive(FromForm)]
+struct VerifyJwtForm {
+    token: String,
+    access_token: String,
+}
+
+#[derive(FromForm)]
+struct GenerateJwtForm {
+    id: String, 
+    method: String, 
+    password: String, 
+    secret_key: String
+}
 
 #[post("/register", data = "<form>")]
 fn register(form: Form<RegistrationForm>) -> String {
@@ -59,6 +75,27 @@ fn login(data: Form<LoginData>) -> String {
     }
 }
 
+#[post("/verify_jwt", data = "<data>")]
+fn verify_jwt(data: Form<VerifyJwtForm>, secret: &State<JwtSecretKey>) -> String {
+    let token = data.token.clone();
+    
+}
+
+#[post("/generate_jwt", data = "<data>")]
+fn generate_jwt(data: Form<GenerateJwtForm>) -> String {
+    let id = data.id.clone();
+    let method = data.method.clone();
+    let password = data.password.clone();
+    let secret_key = data.secret_key.clone();
+
+    let user = jwt::generate_token(id.as_str(), method.as_str(), password.as_str(), secret_key.as_str());
+
+    if user.success {
+        format!("User jwt generated: {}", user.token)
+    } else {
+        format!("User jwt generation failed: {}", user.error)
+    }
+}
 
 
 #[launch]
@@ -67,6 +104,7 @@ fn rocket() -> _ {
     if sql.is_err() {
         panic!("Failed to setup database: {:?}", sql.unwrap_err());
     }
-    utils::setup_test_user();
-    rocket::build().mount("/", routes![index, register, login])
+    let secret_key = "your_secret_key".to_string();
+    let jwt_secret = jwt::JwtSecretKey { secret: secret_key };
+    rocket::build().manage(jwt_secret).mount("/", routes![index, register, login, verify_jwt, generate_jwt])
 }
