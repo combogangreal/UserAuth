@@ -1,10 +1,10 @@
 #[warn(unused_assignments)]
 #[macro_use] extern crate rocket;
-use rocket::time::convert::Second;
 use user_auth_temp::jwt::JwtSecretKey;
 use user_auth_temp::{auth, utils, jwt};
 use rocket::form::Form;
 use rocket::State;
+use rocket::http::Status;
 
 #[get("/")]
 fn index() -> String {
@@ -75,10 +75,23 @@ fn login(data: Form<LoginData>) -> String {
     }
 }
 
-#[post("/verify_jwt", data = "<data>")]
-fn verify_jwt(data: Form<VerifyJwtForm>, secret: &State<JwtSecretKey>) -> String {
-    let token = data.token.clone();
-    
+#[post("/verifyjwt", data = "<data>")]
+fn verify_jwt(data: Form<VerifyJwtForm>, secret: &State<JwtSecretKey>) -> Result<String, Status> {
+    let token = &data.token;
+    let access_token = &data.access_token;
+
+    if access_token != &secret.secret {
+        return Err(Status::Unauthorized);
+    } else {
+        let verified = jwt::verify_token(token, access_token, secret);
+
+        if verified.success {
+            Ok(format!("User jwt verified: {}", token))
+        } else {
+            println!("User jwt verification failed: {}", verified.error);
+            Err(Status::Unauthorized)
+        }
+    }
 }
 
 #[post("/generate_jwt", data = "<data>")]

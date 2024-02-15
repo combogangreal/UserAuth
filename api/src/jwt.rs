@@ -1,6 +1,7 @@
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, decode, DecodingKey, errors::ErrorKind};
+use jsonwebtoken::{encode, Algorithm, EncodingKey, Header, decode, DecodingKey, Validation};
 use serde::{Serialize, Deserialize};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use rocket::State;
 
 pub struct JwtSecretKey {
     pub secret: String,
@@ -24,11 +25,16 @@ pub struct JwtReturn {
 
 pub fn generate_token(id: &str, method: &str, password: &str, secret_key: &str) -> JwtReturn {
     let header = Header::new(Algorithm::HS256);
+    let expiration_time = SystemTime::now()
+        .checked_add(Duration::from_secs(43200))  
+        .expect("Failed to calculate expiration time");
     let claims = UserClaims {
         sub: id.to_string(),
         method: method.to_string(),
         password: password.to_string(),
-        exp: 43200,
+        exp: expiration_time.duration_since(SystemTime::UNIX_EPOCH)
+        .expect("Failed to calculate duration since epoch")
+        .as_secs() as usize,
         success: true,
         error: "".to_string(),
     };
@@ -47,25 +53,56 @@ pub fn generate_token(id: &str, method: &str, password: &str, secret_key: &str) 
     }
 }
 
-pub fn verify_token(token: &str, secret_key: &str) -> Result<UserClaims, jsonwebtoken::errors::Error> {
-    let decoding_key = DecodingKey::from_secret(secret_key.as_ref());
-    let decoded = decode::<UserClaims>(token, &decoding_key, &Default::default());
+pub fn verify_token(token: &str, secret_key: &str, jwt: &State<JwtSecretKey>) -> UserClaims {
+    if secret_key != jwt.secret {
+        return UserClaims {
+            sub: "".to_string(),
+            method: "".to_string(),
+            password: "".to_string(),
+            exp: 0,
+            success: false,
+            error: "Invalid secret key".to_string(),
+        };
+    }
 
-    match decoded {
-        Ok(mut token_data) => {
+    match decode::<UserClaims>(
+        token,
+        &DecodingKey::from_secret(secret_key.as_bytes()),
+        &Validation::new(Algorithm::HS256),
+    ) {
+        Ok(token_data) => {
             let current_time = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
+                .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as usize;
 
             if current_time <= token_data.claims.exp {
-                Ok(token_data.claims)
+                UserClaims {
+                    sub: token_data.claims.sub,
+                    method: token_data.claims.method,
+                    password: token_data.claims.password,
+                    exp: token_data.claims.exp,
+                    success: true,
+                    error: "".to_string(),
+                }
             } else {
-                token_data.claims.success = false;
-                token_data.claims.error = "Token expired".to_string();
-                Err(jsonwebtoken::errors::Error::from(ErrorKind::ExpiredSignature))
+                UserClaims {
+                    sub: "".to_string(),
+                    method: "".to_string(),
+                    password: "".to_string(),
+                    exp: 0,
+                    success: false,
+                    error: "Token has expired".to_string(),
+                }
             }
         }
-        Err(err) => Err(err),
+        Err(err) => UserClaims {
+            sub: "".to_string(),
+            method: "".to_string(),
+            password: "".to_string(),
+            exp: 0,
+            success: false,
+            error: format!("JWT Verification Error: {:?}", err),
+        },
     }
 }
