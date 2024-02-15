@@ -2,12 +2,14 @@ use sqlite;
 use std::time::SystemTime;
 use rand::{distributions::Alphanumeric, Rng};
 
+// Return data structure for utility methods
 pub struct AuthReturn {
     pub token: String,
     pub success: bool,
     pub error: String,
 }
 
+// User data structure
 #[allow(dead_code)]
 pub struct User {
     id: String,
@@ -19,6 +21,7 @@ pub struct User {
     updated_at: String,
 }
 
+// Setup database
 pub fn setup_db() -> Result<(), sqlite::Error>{
     let conn = sqlite::open("database.db").unwrap();
     let query = "
@@ -38,12 +41,14 @@ pub fn setup_db() -> Result<(), sqlite::Error>{
     conn.execute(query)
 }
 
+// Gets the current timestamp
 pub fn get_timestamp() -> String {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(SystemTime::UNIX_EPOCH).unwrap();
     since_the_epoch.as_secs().to_string()
 }
 
+// Generates a random id
 pub fn generate_id() -> String{
     let s: String = rand::thread_rng()
     .sample_iter(&Alphanumeric)
@@ -53,6 +58,7 @@ pub fn generate_id() -> String{
     s
 }
 
+// Checks if user's username exists
 pub fn username_exists(username: String) -> bool {
     let conn = sqlite::open("database.db").unwrap();
     let query = "SELECT * FROM users WHERE username = ?";
@@ -72,6 +78,7 @@ pub fn username_exists(username: String) -> bool {
     return false;
 }
 
+// Checks if user's email exists
 pub fn email_exists(email: String) -> bool {
     let conn = sqlite::open("database.db").unwrap();
     let query = "SELECT * FROM users WHERE email = ?";
@@ -91,6 +98,7 @@ pub fn email_exists(email: String) -> bool {
     return false;
 }
 
+// Checks if user's phone exists
 pub fn phone_exists(phone: String) -> bool {
     let conn = sqlite::open("database.db").unwrap();
     let query = "SELECT * FROM users WHERE phone = ?";
@@ -110,11 +118,13 @@ pub fn phone_exists(phone: String) -> bool {
     return false;
 }
 
+// Checks if a string is a email
 pub fn is_email(email: String) -> bool {
     let re = regex::Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$").unwrap();
     re.is_match(email.as_str())
 }
 
+// Checks if a string is a phone
 pub fn is_phone(phone: String) -> bool {
     let re = regex::Regex::new(r"^[0-9]{10}$").unwrap();
     re.is_match(phone.as_str())

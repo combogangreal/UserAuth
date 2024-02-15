@@ -3,10 +3,12 @@ use serde::{Serialize, Deserialize};
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use rocket::State;
 
+// Common JWT Key
 pub struct JwtSecretKey {
     pub secret: String,
 }
 
+// Claims for JWT Token
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserClaims {
     pub sub: String, 
@@ -17,12 +19,14 @@ pub struct UserClaims {
     pub error: String,
 }
 
+// Reperesents the return of the JWT generation
 pub struct JwtReturn {
     pub success: bool,
     pub error: String,
     pub token: String,
 }
 
+// Generate JWT Token
 pub fn generate_token(id: &str, method: &str, password: &str, secret_key: &str) -> JwtReturn {
     let header = Header::new(Algorithm::HS256);
     let expiration_time = SystemTime::now()
@@ -53,6 +57,7 @@ pub fn generate_token(id: &str, method: &str, password: &str, secret_key: &str) 
     }
 }
 
+// Verify JWT Token
 pub fn verify_token(token: &str, secret_key: &str, jwt: &State<JwtSecretKey>) -> UserClaims {
     if secret_key != jwt.secret {
         return UserClaims {

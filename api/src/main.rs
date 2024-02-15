@@ -1,16 +1,19 @@
 #[warn(unused_assignments)]
 #[macro_use] extern crate rocket;
 use user_auth_temp::jwt::JwtSecretKey;
-use user_auth_temp::{auth, utils, jwt};
+use user_auth_temp::{auth, utils, jwt, SECRET_KEY};
 use rocket::form::Form;
 use rocket::State;
 use rocket::http::Status;
 
+// Index route, doesnt do anything
 #[get("/")]
 fn index() -> String {
     return "Hello, please use a proper api link".to_string();
 }
 
+
+// Data forms for the routes
 #[derive(FromForm)]
 struct RegistrationForm {
     username: String,
@@ -39,6 +42,12 @@ struct GenerateJwtForm {
     secret_key: String
 }
 
+#[derive(FromForm)]
+struct LogoutForm {
+    method: String,
+}
+
+// Registers a user
 #[post("/register", data = "<form>")]
 fn register(form: Form<RegistrationForm>) -> String {
     let user = auth::sign_up(
@@ -55,6 +64,7 @@ fn register(form: Form<RegistrationForm>) -> String {
     }
 }
 
+// Logs in to the website
 #[post("/login", data = "<data>")]
 fn login(data: Form<LoginData>, secret: &State<JwtSecretKey>) -> String {
     let method = &data.method;
@@ -75,6 +85,7 @@ fn login(data: Form<LoginData>, secret: &State<JwtSecretKey>) -> String {
     }
 }
 
+// Verifies a jwt for a user
 #[post("/verifyjwt", data = "<data>")]
 fn verify_jwt(data: Form<VerifyJwtForm>, secret: &State<JwtSecretKey>) -> Result<String, Status> {
     let token = &data.token;
@@ -94,6 +105,7 @@ fn verify_jwt(data: Form<VerifyJwtForm>, secret: &State<JwtSecretKey>) -> Result
     }
 }
 
+// Generates a jwt for a user
 #[post("/generate_jwt", data = "<data>")]
 fn generate_jwt(data: Form<GenerateJwtForm>) -> String {
     let id = data.id.clone();
@@ -110,6 +122,19 @@ fn generate_jwt(data: Form<GenerateJwtForm>) -> String {
     }
 }
 
+// Logs out of the website
+#[post("/logout", data = "<data>")]
+fn logout(data: Form<LogoutForm>) -> String {
+    let method = &data.method;
+    let user = auth::sign_out(method.to_string());
+    if user.success {
+        format!("User logged out: {}", method)
+    } else {
+        format!("User logout failed: {}", user.error)
+    }
+}
+
+
 
 #[launch]
 fn rocket() -> _ {
@@ -117,7 +142,6 @@ fn rocket() -> _ {
     if sql.is_err() {
         panic!("Failed to setup database: {:?}", sql.unwrap_err());
     }
-    let secret_key = "your_secret_key".to_string();
-    let jwt_secret = jwt::JwtSecretKey { secret: secret_key };
-    rocket::build().manage(jwt_secret).mount("/", routes![index, register, login, verify_jwt, generate_jwt])
+    let jwt_secret = jwt::JwtSecretKey { secret: SECRET_KEY.to_string() };
+    rocket::build().manage(jwt_secret).mount("/", routes![index, register, login, verify_jwt, generate_jwt, logout])
 }

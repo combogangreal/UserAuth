@@ -1,7 +1,8 @@
 use sqlite;
-use crate::{utils, jwt};
+use crate::{utils, jwt, SECRET_KEY};
 use rocket::State;
 
+// Represents a return type for the auth functions
 #[allow(dead_code)]
 pub struct ReturnType {
     pub success: bool,
@@ -9,6 +10,8 @@ pub struct ReturnType {
     pub error: String
 }
 
+
+// Represents all the sign in methods for a user
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct SignInMethod {
@@ -17,7 +20,6 @@ pub struct SignInMethod {
     pub phone_number: bool,
     pub value: String
 }
-
 impl SignInMethod {
     pub fn from_email(email: String) -> SignInMethod {
         SignInMethod {
@@ -45,16 +47,12 @@ impl SignInMethod {
     }
 }
 
-impl SignInMethod {
-}
-
-#[allow(dead_code)]
-
+// Sign up a user 
 pub fn sign_up(email: String, username: String, password: String, phone_number: String) -> ReturnType {
     let _ = utils::setup_db();
     let conn = sqlite::open("database.db").unwrap();
     let id = utils::generate_id();
-    let n_jwt = jwt::generate_token(&id, &email, &password, "your_secret_key").token;
+    let n_jwt = jwt::generate_token(&id, &email, &password, SECRET_KEY).token;
     if utils::username_exists(username.clone()) {
         return ReturnType {
             success: false,
@@ -95,6 +93,7 @@ pub fn sign_up(email: String, username: String, password: String, phone_number: 
     }
 }
 
+// Sign in a user
 pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSecretKey>) -> ReturnType {
     let _ = utils::setup_db();
     let conn = sqlite::open("database.db").unwrap();
@@ -156,7 +155,7 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
         let current_jwt = row.read::<&str, _>("current_jwt");
         let jwt_verified = row.read::<&str, _>("jwt_verified");
         if jwt_verified == "true" {
-            if jwt::verify_token(current_jwt, "your_secret_key", secret).success {
+            if jwt::verify_token(current_jwt, SECRET_KEY, secret).success {
                 return ReturnType {
                     success: true,
                     jwt: current_jwt.to_string(),
@@ -165,7 +164,7 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
             }
         } else {
             let id = row.read::<&str, _>("id");
-            let token = jwt::generate_token(id, email, &password, "your_secret_key");
+            let token = jwt::generate_token(id, email, &password, SECRET_KEY);
             let query = format!("UPDATE users SET current_jwt = '{}', jwt_verified = 'true' WHERE id = '{}'", token.token, id);
             let sql = conn.execute(query);
             if !sql.is_err() {
@@ -185,7 +184,27 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
     }
     ReturnType {
         success: true,
-        jwt: jwt::generate_token("", &method.value, &password, "your_secret_key").token,
+        jwt: jwt::generate_token("", &method.value, &password, SECRET_KEY).token,
         error: "".to_string()
+    }
+}
+
+// Sign out a user
+pub fn sign_out(method: String) -> ReturnType {
+    let conn = sqlite::open("database.db").unwrap();   
+    let query = format!("UPDATE users SET current_jwt = '', jwt_verified = 'false' WHERE email = '{}' OR username = '{}' OR phone = '{}'", method, method, method);
+    let sql = conn.execute(query);
+    if !sql.is_err() {
+        return ReturnType {
+            success: true,
+            jwt: "".to_string(),
+            error: "".to_string(),
+        }
+    } else {
+        return ReturnType {
+            success: false,
+            jwt: "".to_string(),
+            error: sql.unwrap_err().to_string(),
+        }
     }
 }
