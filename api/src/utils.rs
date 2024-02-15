@@ -1,5 +1,4 @@
 use sqlite;
-use crate::auth;
 use std::time::SystemTime;
 use rand::{distributions::Alphanumeric, Rng};
 
@@ -31,6 +30,8 @@ pub fn setup_db() -> Result<(), sqlite::Error>{
             phone TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            current_jwt TEXT NOT NULL,
+            jwt_verified TEXT NOT NUll,
             PRIMARY KEY (id, username, email, phone)
         );
     ";
@@ -50,24 +51,6 @@ pub fn generate_id() -> String{
     .map(char::from)
     .collect();
     s
-}
-
-pub fn setup_test_user() -> AuthReturn {
-    let su = auth::sign_up("test@example.com".to_string(), "combogangreal".to_string(), "testpass123".to_string(), "1234567890".to_string());
-    AuthReturn {
-        token: "testtoken".to_string(),
-        success: su.success,
-        error: su.error,
-    }
-}
-
-pub fn sign_in(method: auth::SignInMethod, password: String) -> AuthReturn {
-    let si = auth::sign_in(method, password);
-    AuthReturn {
-        token: "testtoken".to_string(),
-        success: si.success,
-        error: si.error,
-    }
 }
 
 pub fn username_exists(username: String) -> bool {

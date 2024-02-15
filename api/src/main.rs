@@ -45,31 +45,31 @@ fn register(form: Form<RegistrationForm>) -> String {
         form.username.clone(),
         form.email.clone(),
         form.phone.clone(),
-        form.password.clone(),
+        form.password.clone()
     );
 
     if user.success {
-        "User created".to_string()
+        format!("User created, JWT: {}", user.jwt)
     } else {
         format!("User creation failed: {}", user.error)
     }
 }
 
 #[post("/login", data = "<data>")]
-fn login(data: Form<LoginData>) -> String {
+fn login(data: Form<LoginData>, secret: &State<JwtSecretKey>) -> String {
     let method = &data.method;
     let password = data.password.clone();
 
     let user = if utils::is_email(method.to_string()) {
-        auth::sign_in(auth::SignInMethod::from_email(method.to_string()), password)
+        auth::sign_in(auth::SignInMethod::from_email(method.to_string()), password, secret)
     } else if utils::is_phone(method.to_string()) {
-        auth::sign_in(auth::SignInMethod::from_phone(method.to_string()), password)
+        auth::sign_in(auth::SignInMethod::from_phone(method.to_string()), password, secret)
     } else {
-        auth::sign_in(auth::SignInMethod::from_username(method.to_string()), password)
+        auth::sign_in(auth::SignInMethod::from_username(method.to_string()), password, secret)
     };
 
     if user.success {
-        "User logged in".to_string()
+        format!("User logged in, JWT: {}" , user.jwt)
     } else {
         format!("User login failed: {}", user.error)
     }
