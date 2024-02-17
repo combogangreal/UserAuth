@@ -52,7 +52,7 @@ pub fn sign_up(email: String, username: String, password: String, phone_number: 
     let _ = utils::setup_db();
     let conn = sqlite::open("database.db").unwrap();
     let id = utils::generate_id();
-    let n_jwt = jwt::generate_token(&id, &email, &password, SECRET_KEY).token;
+    let n_jwt = jwt::generate_token(&id, &email, &username, &phone_number, &email, &password, SECRET_KEY).token;
     if utils::username_exists(username.clone()) {
         return ReturnType {
             success: false,
@@ -75,9 +75,9 @@ pub fn sign_up(email: String, username: String, password: String, phone_number: 
         }
     }
     let query = format!("
-    INSERT INTO users (id, email, username, password, phone, created_at, updated_at, current_jwt, jwt_verified)
+    INSERT INTO users (id, username, password, email, phone, created_at, updated_at, current_jwt, jwt_verified)
     VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')
-    ", id, email, username, password, phone_number, utils::get_timestamp(), utils::get_timestamp(), n_jwt, true);
+    ", id, username, password, email, phone_number, utils::get_timestamp(), utils::get_timestamp(), n_jwt, true);
     let sql = conn.execute(query);
     if sql.is_err() {
         return ReturnType {
@@ -98,21 +98,18 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
     let _ = utils::setup_db();
     let conn = sqlite::open("database.db").unwrap();
     let mut query = "";
-    let mut index = 1;
     if method.email {
         query = "SELECT * FROM Users WHERE email = ?";
     } else if method.username {
-        query = "SELECT * FROM Users WHERE email = ?";
-        index = 2;
+        query = "SELECT * FROM Users WHERE username = ?";
     } else if method.phone_number {
-        query = "SELECT * FROM Users WHERE email = ?";
-        index = 3;
+        query = "SELECT * FROM Users WHERE phone = ?";
     }
     for row in conn
     .prepare(query)
     .unwrap()
     .into_iter()
-    .bind((index, method.value.as_str()))
+    .bind((1, method.value.as_str()))
     .unwrap()
     .map(|row| row.unwrap())
     {
@@ -164,7 +161,7 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
             }
         } else {
             let id = row.read::<&str, _>("id");
-            let token = jwt::generate_token(id, email, &password, SECRET_KEY);
+            let token = jwt::generate_token(id, email,  username, phone, &method.value,&password, SECRET_KEY);
             let query = format!("UPDATE users SET current_jwt = '{}', jwt_verified = 'true' WHERE id = '{}'", token.token, id);
             let sql = conn.execute(query);
             if !sql.is_err() {
@@ -182,9 +179,14 @@ pub fn sign_in(method: SignInMethod, password: String, secret: &State<jwt::JwtSe
             }
         }
     }
+    let user = conn.prepare("SELECT * FROM users WHERE email = ? OR username = ? OR phone = ?").unwrap().into_iter().bind((1, method.value.as_str())).unwrap().map(|row| row.unwrap()).next().unwrap();
+    let id = user.read::<&str, _>("id");
+    let username = user.read::<&str, _>("username");
+    let email = user.read::<&str, _>("email");
+    let phone = user.read::<&str, _>("phone");
     ReturnType {
         success: true,
-        jwt: jwt::generate_token("", &method.value, &password, SECRET_KEY).token,
+        jwt: jwt::generate_token(id, email, username, phone, &method.value, &password, SECRET_KEY).token,
         error: "".to_string()
     }
 }

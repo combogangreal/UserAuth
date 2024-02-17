@@ -1,80 +1,92 @@
 import React, { useState } from "react";
 import {
-  ThemeProvider,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
+    ThemeProvider,
+    CssBaseline,
+    Container,
+    Card,
+    CardContent,
+    Typography,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    CardActions
 } from "@mui/material";
 import theme from "@/theme";
 
-const HomePage = () => {
+export default function HomePage() {
     const [openDialog, setOpenDialog] = useState(false);
 
-    const handleOpenDialog = () => {
+    const handleDialogOpen = () => {
         setOpenDialog(true);
     };
 
-    const handleCloseDialog = () => {
+    const handleDialogClose = () => {
         setOpenDialog(false);
-    };
-
-    const handleLogin = () => {
-        window.location.href = "/login";
-    };
-
-    const handleSignUp = () => {
-        window.location.href = "/register";
     };
 
     return (
         <ThemeProvider theme={theme}>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-                <Card style={{ background: "#444", color: "#fff", outline: "none" }}>
+            <CssBaseline />
+            <Container
+                sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100vh",
+                }}
+            >
+                <Card sx={{ minWidth: 300, padding: 3 }}>
                     <CardContent>
-                        <Typography variant="h5" component="div" gutterBottom>
-                            User Auth Template
+                        <Typography variant="h5" component="div" sx={{ marginBottom: 2 }}>
+                            Welcome to User Auth Template
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            A user authentication template built with rust and nextjs
+                            A fully made template for user authentaction.
                         </Typography>
-                        <div style={{ marginTop: "20px" }}>
-                            <Button variant="contained" color="primary" onClick={handleLogin}>
-                                Login
-                            </Button>
-                            <Button variant="contained" color="primary" style={{ marginLeft: "10px" }} onClick={handleSignUp}>
-                                Sign Up
-                            </Button>
-                            <Button variant="contained" color="primary" style={{ marginLeft: "10px" }} onClick={handleOpenDialog}>
-                                About
-                            </Button>
-                        </div>
                     </CardContent>
-                </Card>
-
-                <Dialog open={openDialog} onClose={handleCloseDialog}>
-                    <DialogTitle>About Us</DialogTitle>
-                    <DialogContent>
-                        <DialogContentText>
-                            This user authentication template was built using rocket.rs + sqlite on the backend for storing and creating users, and nextjs + material-ui for the frontend.
-                            This was created by ComboGang, who you can contact through discord at https://discord.gg/2JgGJztY, all the code is also open source at https://github.com/combogangreal/UserAuth
-                            If you wish to learn more, or need help, just ping me through the discord server or make a ticket.
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleCloseDialog} color="primary">
-                            Close
+                    <CardActions>
+                        <Button
+                        href="/login"
+                        variant="contained"
+                        color="primary"
+                        >
+                            Log In
                         </Button>
-                    </DialogActions>
-                </Dialog>
-            </div>
+                        <Button
+                        href="/register"
+                        variant="outlined"
+                        color="primary"
+                        sx={{ marginLeft: 1 }}
+                        >
+                            Register
+                        </Button>
+                        <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleDialogOpen}
+                        sx={{ marginLeft: 1 }}
+                        >
+                            About
+                        </Button>
+                    </CardActions>
+                </Card>
+            </Container>
+
+            <Dialog open={openDialog} onClose={handleDialogClose}>
+                <DialogTitle>About</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        This user auth template was made using rocket.rs and sqlite on the backend, and nextjs + material-ui on the frontend. 
+                        I made this as a project while bored, and to help people code similar things, please make a pull request if you have any improvements.
+                        If you need anything help you can visit this discord here: https://discord.gg/Kvy9etJwvc and ask for help. The github is here: https://github.com/combogangreal/UserAuth
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDialogClose}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </ThemeProvider>
     );
-};
-
-export default HomePage;
+}

@@ -1,6 +1,10 @@
 # UserAuth Api
 This is the local api part, this holds the user creation, and authentication.
 
+## Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install)
+- [DB Browser for SQLite](https://sqlitebrowser.org/dl) (optional) - for viewing the database
+
 ## Note
 For JWT Generation, we use a secret key for validation, so you will have to change the 
 ```rust
@@ -45,6 +49,9 @@ Replace 'your_jwt_token' with your actual jwt token, and 'your_secret_key' with 
 ```bash
 curl -X POST -d "token=your_jwt_token&access_token=your_secret_key" http://127.0.0.1:8000/verifyjwt
 ```
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT)
